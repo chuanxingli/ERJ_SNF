@@ -8,4 +8,4 @@ The respiratory is under construction and will continually update until finished
 If you have any questions or suggestions, please contact Chuan-xing Li (lichuanxing@gmail.com).
 
 Here is the workflow for the project:
-![alt text](https://github.com/clisweden/ERJ_SNF/blob/master/doc/design_2019-03-25.pdf)
+![alt text](https://github.com/clisweden/ERJ_SNF/blob/master/doc/design_2019-03-25.png)
