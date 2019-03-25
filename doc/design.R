@@ -25,7 +25,7 @@ subgraph cluster_m {
                         x0 [label = 'Raw data',shape = cylinder]
                         x1 [label = 'Data processing\\n(process.R)',shape = box]
 
-                        a [label='Processed data\\n(pdata.rdata)', shape = parallelogram, margin = 0]
+                        a [label='Processed data\\n(cosmic.RData)', shape = parallelogram, margin = 0]
 
                         
 
@@ -47,9 +47,9 @@ subgraph cluster_m {
 
 
                 node [shape = box]
-                        d [label = 'Predicted clusters(pcluster.rdata)', shape = parallelogram, margin = 0]
-                        e [label = 'Accuracy of prediction\\n(accuracy.R)',shape = box]
-                        f [label = 'Accuracies\\n(acc.rdata)', shape = parallelogram, margin = 0]
+                        d [label = 'Predicted clusters\\n(pcluster.rdata)', shape = parallelogram, margin = 0]
+                        e [label = 'Accuracy of prediction\\n(groupPredictW.R)',shape = box]
+                        f [label = 'Accuracies\\n(resNMI.rdata)', shape = parallelogram, margin = 0]
 
                         i [label = 'Downstream Analysis']
                         # i1 [label = 'Blockcluster of \\nfunctions and communities']
@@ -114,6 +114,6 @@ subgraph cluster_m {
 }",width=500,height=800)
 
 
-filename <- paste0("design_",Sys.Date(),".pdf")
-# semplot %>% export_svg %>% charToRaw %>% rsvg %>% png::writePNG(filename)
-semplot %>% export_svg %>% charToRaw %>% rsvg_pdf(filename)
+filename <- paste0("./doc/design_",Sys.Date(),".png")
+semplot %>% export_svg %>% charToRaw %>% rsvg %>% png::writePNG(filename)
+
