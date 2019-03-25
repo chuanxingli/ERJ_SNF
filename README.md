@@ -7,8 +7,5 @@ European Respiratory Journal Jan 2018, 1701930; DOI: 10.1183/13993003.01930-2017
 The respiratory is under construction and will continually update until finished.
 If you have any questions or suggestions, please contact Chuan-xing Li (lichuanxing@gmail.com).
 
-graph LR
-Domain --> b[Web builder: one/wix]
-Domain --> c[WordPress]
-c --> d[Host/server/storage]
-b --> d
+Here is the workflow for the project:
+![alt text](https://github.com/clisweden/ERJ_SNF/blob/master/doc/design_2019-03-25.pdf)
