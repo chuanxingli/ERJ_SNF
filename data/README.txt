@@ -1,1 +1,1 @@
-This is the README file of the folder ./data
+cosmic.RData is the processed data from raw data. The processing procedure is in Report_COSMIC_Data.html
