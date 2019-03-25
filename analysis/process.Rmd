@@ -1,0 +1,56 @@
+---
+title: "Project Report"
+author: "Chuan-Xing Li [email](chuan-xing.li@ki.se)"
+email: "chuan-xing.li@ki.se"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    number_sections: yes
+  html_document:
+    fig_caption: yes
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: cerulean
+---
+**Version:** `r version$version.string`   
+**Markdown file:** report.Rmd     
+**Last update of Markdown file:** 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Overview
+This report is to recording the update of project, and also some primary analysis results .   
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## to-do list
+1. add citation
+2. add figure and table example
