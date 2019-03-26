@@ -22,36 +22,49 @@ subgraph cluster_m {
         fillcolor = white
                 # several 'node' statements
                 node []
+                        add0 [label = 'Parameters for random data\\nnomics, ngroup,\\nsample/gene sizes', shape = hexagon]
+                        add1 [label = 'Generate random data\\n(generate_random_dataL.R)', shape = box]
                         x0 [label = 'Raw data',shape = cylinder]
-                        x1 [label = 'Data processing\\n(process.R)',shape = box]
+                        x1 [label = 'Data processing\\n(generate_input.R)',shape = box]
+                        a [label='Processed data\\n(input)', shape = parallelogram, margin = 0]
+                       add2 [label='Similarity Network Fusion\\n(SNFtool)', shape = box]
+                        add3 [label = 'Similarity Matrix\\n(Wi, W)', shape = parallelogram, margin = 0]
 
-                        a [label='Processed data\\n(cosmic.RData)', shape = parallelogram, margin = 0]
-
-                        
 
                 subgraph cluster {
-                        label = 'Unsupervised clustering\\n(SNFunsupervised.R)';
+                        label = 'Unsupervised clustering\\n(analysis.R)';
                         fillcolor = white;
                         color = black;
                         fontsize = 14;
-                        g1 [label = 'Parameter optimization' shape = box]
-                        g2 [label = 'Best cluster\\nnumbers estimation' shape = box] }
+                        #g1 [label = 'Parameter optimization' shape = box]
+                        g2 [label = 'Best cluster\\nnumbers estimation' shape = box]
+                        g1 [label = 'Fixed\\ncluster number' shape = box]
+                        g3 [label = 'Unsupervised clustering' shape = box]}
 
                 subgraph cluster2 {
-                        label = 'Supervised clustering\\n(SNFsupervised.R)';
+                        label = 'Supervised clustering\\n(analysis.R)';
                         fillcolor = white;
                         color = black;
                         fontsize = 14;
-                        h1 [label = 'Permutation' shape = box]
-                        h2 [label = 'Parameter optimization' shape = box]}
+                        h1 [label = 'Permutation\\n(LOOCV)' shape = box]
+                        h11 [label = 'Supervised prediction' shape = box]}
 
+                subgraph cluster_3{
+                        label = 'Generate Dataset';
+                        fillcolor = white;
+                        color = black;
+                        fontsize = 14;
+                        add0; add1
+                }
+                #{rank = same; add1; x0}
 
                 node [shape = box]
-                        d [label = 'Predicted clusters\\n(pcluster.rdata)', shape = parallelogram, margin = 0]
-                        e [label = 'Accuracy of prediction\\n(groupPredictW.R)',shape = box]
-                        f [label = 'Accuracies\\n(resNMI.rdata)', shape = parallelogram, margin = 0]
 
-                        i [label = 'Downstream Analysis']
+                        d [label = 'Accuracy\\n(NMI)', shape = parallelogram, margin = 0]
+                        # e [label = 'Parameter Optimization\\n(unupload.R)',shape = box]
+                        # f [label = 'Accuracies\\n(resNMI.rdata)', shape = parallelogram, margin = 0]
+                        # 
+                        # i [label = 'Downstream Analysis']
                         # i1 [label = 'Blockcluster of \\nfunctions and communities']
                         # j [label = '3-nodes motifs']
                         # k [label = 'Candidate gene list \\nnetworks', shape = parallelogram, margin = 0]
@@ -62,16 +75,21 @@ subgraph cluster_m {
 
                 # several 'edge' statements
                 x0 -> x1 -> a
-                a -> g1 [lhead = cluster]
-                a -> h1 [lhead = cluster2]
-                g1 -> g2
-                h1 -> h2
-                g2 -> d [ltail = cluster]
-                h2 -> d [ltail = cluster2]
-                d -> e -> f-> i
+                add3 -> g1 [lhead = cluster]
+                add3 -> h1 [lhead = cluster2]
+                {g1,g2} -> g3
+                h1 -> h11
+                g3 -> d [ltail = cluster]
+                h11 -> d [ltail = cluster2]
+                #d -> e -> f-> i
+add0 -> add1 -> x0
+a -> add2 [label = 'Parameters for SNF\\nK, alpha, t']
+add2 -> add3
 
 
 }
+
+
 
         subgraph cluster_l {
 
@@ -108,7 +126,7 @@ subgraph cluster_m {
 }
         # align two subgraph
         newrank=true;
-        {rank = same; ll5; i}
+        {rank = same; ll5; d}
 
 
 }",width=500,height=800)
