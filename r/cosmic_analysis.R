@@ -11,23 +11,36 @@ source(paste0(fpath,'r/internal.R'))
 
 #===============================================================================
 # 1. Prepare multi-omics karolinska cosmic dataset
+# load processed cosmic.RData
 
-## 1.1 generate a dataset with multi omic, unequal sample and feature size.
-### The format in dataL is row for samples and columns for features
-## prepare data for smoker and COPD smoker female
+# source(paste0(fpath,"r/cosmic_process.R"))
+# if (file.exists(paste0(fpath,"data/cosmic.RData"))==FALSE) {
+#         
+#         cosmic<-cosmic_process(par,del_sample)
+#         fdate <- Sys.Date()
+#         cosmic$BAL_P_iTRAQ_ONE_impute<-iTRAQ_impute(cosmic$BAL_P_iTRAQ_ONE,10,"./BAL_P_iTRAQ_ONE") # imputation of iTRAQ data
+#         setwd(fpath)
+#         cosmic$BAL_P_iTRAQ_ALL_impute<-iTRAQ_impute(cosmic$BAL_P_iTRAQ_ONE,10,"./BAL_P_iTRAQ_ALL") # imputation of iTRAQ data
+#         setwd(fpath)
+#         save(cosmic,fdate,file=paste0(fpath,"data/cosmic.RData"))
+# }
+load(paste0(fpath,"data/cosmic.RData"))
+### The format in cosmic is column for samples and rows for features
+
+## prepare label
 group4 <- cosmic$datasummary$cgroup; names(group4) <- rownames(cosmic$datasummary); # label for four groups
 group3 <- droplevels(subset(group4,group4!="EC",drop=TRUE))
 # group3 <- droplevels(subset(group3,group3!="NH",drop=TRUE))
 label <- as.factor(as.numeric(group3)); names(label) <- names(group3) # SH + SC
 gs <- intersect(rownames(cosmic$datasummary)[cosmic$datasummary$gender=="female"],names(label)) # females
 label <- label[gs]
-# two groups: female SH (1, n = 20), female SC (2, n = 12)
+
 rm(group3,group4,gs)
 
-omics <- c("BAL_T_mRNA","BAL_T_miR","BAL_P_DIGE","BAL_P_iTRAQ_ALL_impute","BEC_T_miR","BEC_P_TMT_impute","EXO_T_miR","Serum_M_Non_targeted","BALF_M_Oxylip")
+omics <- c("BAL_T_mRNA","BAL_T_miR","BAL_P_DIGE","BAL_P_iTRAQ_ALL_impute","BEC_P_TMT_impute","EXO_T_miR","Serum_M_Non_targeted","Serum_M_Oxylip","BALF_M_Oxylip")
 #input <- datapre(cosmic,label,minS=5,mRNArsd=5.5)
 # minS - minimize sample numbers in subgroups = 5
-# mRNArsd - RSD threshold for mRNAs. If 0, means no filter = 5.5.
+
 dataL <- lapply(cosmic[omics],t)
 ## 1.2 prepare formated data for SNF
 input <- generate_input(dataL,label,omics=omics,minS=5)
