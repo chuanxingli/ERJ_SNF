@@ -1,0 +1,375 @@
+---
+title: "Report of COSMIC data processing"
+author: "Chuan-Xing Li"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r, echo=FALSE, warning=FALSE,include=FALSE}
+#setwd("/Users/cli/Documents/proj/copd/data")
+## This is the main parameter input part.
+#fpath <- "/Users/cli/Documents/proj/copd/data/" # fpath is the path of files. This is using the relative path. Before running this file, please set the path to the folder.
+fpath <- "~/Documents/GitHub/ERJ_SNF/"
+# fpath <- "/Users/cli/Documents/Projects/COPD/data/" # This is using the full path.
+setwd(fpath)
+fname <- paste(fpath,"rawdata/input_info.xlsx",sep="")
+del_sample <- c(3208,3218) # The COSMIC ID will be deleted when inputing the data
+
+## library required
+library(knitr)
+library(gdata)
+library(ggplot2)
+library(limma) # Quantile normalization of data (normalizeQuantiles )
+library(corrplot)
+source(paste0(fpath,"r/cosmic_process.R"))
+source("./datasummary_format.R")
+source('./iTRAQ_impute.R')
+## input parameter sheet, maily for the name of data files and input paramteres.
+colClass <- c(rep("character",9))
+par <- read.xls(fname,sheet="par",colClasses = colClass,na.string = "NA")
+rownames(par) <- par$item
+class(par$nrows) <- "integer"
+class(par$scol) <- "integer"
+class(par$ecol) <- "integer"
+rm(colClass)
+
+tableNO <- 0; FigNO <- 0;
+```
+
+# Overview
+This report is to recording the update of COSMIC data sets, and also some primary analysis results.   
+**Version:** `r version$version.string`   
+**Markdown file:** Report_COSMIC_Data.Rmd     
+**Last update of Markdown file:** 2015-10-04
+
+# Format of data summary and sample barcode
+## Sample barcode
+Format:  [Project]-[Participant]-[Gender]-[Smoking]-[Diagnosis]     
+Example: COSMIC_1101_M_N_H
+
+```{r, echo=FALSE, warning=FALSE}
+tableNO <- tableNO + 1
+t <- read.xls(fname,sheet="sample")
+kable(t, caption =paste("Table ",tableNO,". Sample Barcode",sep=""),row.names = FALSE,escape = TRUE)
+rm(t)
+```
+
+## Data platform Barcode
+Format:  [Cell]-[Omic]-[Platform]    
+Example: BAL_P_DIGE
+
+```{r, echo=FALSE, warning=FALSE}
+tableNO <- tableNO + 1
+t <- read.xls(fname,sheet="platform")
+kable(t, caption = paste("Table ",tableNO,". Data Platform Barcode",sep=""),row.names = FALSE)
+rm(t)
+```
+
+```{r, echo=FALSE, include = FALSE, warning=FALSE}
+# processing data or input processed data
+if (file.exists("cosmic.RData")==FALSE) {
+  
+  cosmic<-cosmic_input(par,del_sample)
+  fdate <- Sys.Date()
+  cosmic$BAL_P_iTRAQ_ONE_impute<-iTRAQ_impute(cosmic$BAL_P_iTRAQ_ONE,10,"./BAL_P_iTRAQ_ONE") # imputation of iTRAQ data
+  setwd(fpath)
+  cosmic$BAL_P_iTRAQ_ALL_impute<-iTRAQ_impute(cosmic$BAL_P_iTRAQ_ONE,10,"./BAL_P_iTRAQ_ALL") # imputation of iTRAQ data
+  setwd(fpath)
+  save(cosmic,fdate,file="cosmic.RData")
+  }
+load("cosmic.RData")
+```
+
+# Information of raw dataset
+
+```{r, echo=FALSE, warning=FALSE}
+tableNO <- tableNO +1
+
+temp <- fdate
+title <- paste("Table ",tableNO, '. Update of COSMIC data files (',temp,')',sep='')
+kable(par, caption = title,row.names = FALSE)
+rm(title,temp,fname)
+```
+
+# Data Summary
+
+All data are transformed to log2 based values.
+```{r, echo=FALSE, warning=FALSE,fig.align='center'}
+tableNO <- tableNO + 1
+temp <- fdate
+title <- paste("Table ",tableNO,' Summary of COSMIC data raw files (',temp,')',sep='')
+omics <- c("HLA_typing","BAL_T_mRNA","BAL_P_DIGE","BAL_T_miR","BEC_T_miR","EXO_T_miR","BALF_M_Oxylip","Serum_M_Oxylip","Serum_M_Non_targeted","Serum_M_Biocrates","Serum_M_Kynurenine","Serum_M_Sphingolipid","BAL_P_iTRAQ_ONE_impute","BAL_P_iTRAQ_ALL_impute","BEC_P_TMT_impute")
+
+# names(cosmic)[c(1,5,14,16,20)] # annotation files
+t <- matrix(nrow = length(omics), ncol = 6)
+colnames(t) <- c("item","nrow/features","ncol/sample","unique_features","missing_values","data type")
+t <- as.data.frame(t)
+t$item <-omics
+sample <- rownames(cosmic$datasummary)
+tsample <- matrix(nrow = length(sample),ncol = length(t$item)+2)
+colnames(tsample) <- c(t$item, "cgroup","gender")
+tsample <- as.data.frame(tsample)
+tsample$cgroup <- cosmic$datasummary$cgroup
+tsample$gender <- cosmic$datasummary$gender
+
+for (i in 1:length(t$item)) {
+  subject <- t$item[i]
+  eval(parse(text=paste("data <- cosmic$",subject,sep="")))
+  c <- match(colnames(data),cosmic$datasummary$barcode)
+  data <- data[,is.na(c)==FALSE]
+  t[i,2:3] <- dim(data)
+  t[i,4] <- length(unique(rownames(data)))
+  t[i,5] <- sum(sum(is.na(data)))
+  t[i,6] <- class(data[1,1])
+  tsample[,i] <- is.element(sample,colnames(data))+0
+}
+tsample$sum<- rowSums(tsample[,1:length(t$item)])
+kable(t, caption = title,row.names = FALSE)
+FigNO <- FigNO + 1
+
+cols <- c(NH="#fc9272", SH="#a1d99b",SC="#fec44f",EC="#2162a6")
+par(mar=c(5.1,4.1,8.1,10.1))
+hist_cut <- ggplot(tsample, aes(x=sum, fill=cgroup),nclass=8)
+hist_cut + geom_bar(binwidth=0.5)+scale_x_continuous(breaks=2.25:9.25,labels=2:9) + xlab("Number of Platforms") + ylab("Number of Samples")+scale_fill_manual(values = cols,name="Groups")+theme_bw() +ggtitle("A") +theme(plot.title = element_text(vjust = -50))
+```
+<center>**Figure `r FigNO`. The histogram for samples by platforms.**    
+Red, green, yellow and blue class tags represent samples in groups of ***Non-smoking Healthy***, ***Smoking Healthy***, ***Smoking COPD*** and ***Ex-smoking COPD*** respectively. </center>
+
+```{r, echo=FALSE, warning=FALSE,fig.align='center'}
+FigNO <- FigNO + 1
+# Heatmap
+heat_raw<-tsample[,1:length(t$item)]
+cgroup <- tsample$cgroup
+rs <- rowSums(heat_raw)
+cs <- colSums(heat_raw)
+heat_raw <- heat_raw[order(-cs)] # reorder by the sum number of samples in each platform
+h1 <- matrix(-1, nrow=nrow(heat_raw),ncol=1)
+heat_raw <- cbind(as.numeric(cgroup)+1,as.numeric(tsample$gender)+5,h1,heat_raw)
+heat <- heat_raw[with(heat_raw,order(cgroup,tsample$gender,-rs)),]
+heat <- t(heat)
+rownames(heat)[1]<-paste("Groups (",ncol(heat),")",sep="")
+rownames(heat)[2]<-"Gender"
+rownames(heat)[3]<-""
+for (i in 4:nrow(heat)){
+        rownames(heat)[i] <- paste(rownames(heat)[i]," (",sum(heat[i,]),")",sep="")
+}
+
+
+palette.breaks <- seq(-1,8,by=1) - 0.5
+color.palette  <- colorRampPalette(c("white", "#deebf7","#67a9cf","#fc9272","#a1d99b","#fec44f","#2162a6","#344152","grey"))(length(palette.breaks) - 1)
+
+heatmap(heat[nrow(heat):1,], Rowv = NA, Colv = NA, scale = "none", labCol =NA, distfun = "binary", col = color.palette, breaks = palette.breaks)
+```
+<center>**Figure `r FigNO`. Summary of Multi-omics Data from COSMIC Project.**   
+Each row represents a platform, and each column is a sample. Dark and light blue cells shows the data is available or not. Red, green, yellow and blue class tags represent samples in groups of ***Non-smoking Healthy***, ***Smoking Healthy***, ***Smoking COPD*** and ***Ex-smoking COPD*** respectively. Black and grey in ***Gender*** bar show female and male respectively. MF: alveolar macrophages; BEC: bronchial epithelial cell; BAL: bronchoalveolar lavage; EXO: exosomes from bronchoalveolar lavage fluid (BALF). The number in brackets is how many samples are tested in each platform. The barcode of platform see "Data platform Barcode" part.</center>
+&nbsp;
+
+```{r, echo=FALSE, warning=FALSE,fig.align='center'}     
+# heatmap of correlation between platforms
+FigNO <- FigNO +1
+heat_raw <- tsample[,t$item]
+hamming.distance <- function(x){
+        cn <- colnames(x)
+        x <- as.matrix(x)
+        y <- matrix(0,ncol(x),ncol(x))
+        for (i in 1:(ncol(x)-1)) {
+                y[i,i] = sum(x[,i])
+                for (j in (i+1):ncol(x)) {
+                        t <- cbind(x[,i],x[,j])
+                        y[i,j] <- sum(rowSums(t)==2)
+                        y[j,i] <- y[i,j]
+                }
+        }
+        rownames(y) <- cn
+        colnames(y) <- cn
+        y[ncol(y),ncol(y)] <- sum(x[,ncol(x)])
+        y/nrow(x)
+}
+corr.m<-hamming.distance(heat_raw)
+
+corrplot(corr.m,order="AOE",p.mat = corr.m*nrow(heat_raw), cl.lim=c(0,1),sig.level=0.01,insig="p-value",tl.col="black")
+```
+
+<center> **Figure `r FigNO`. Correlation map between different platforms**   
+The concentration of color is positive correlated with the percent of samples tested by both platforms. The values are number of samples tested by the corresponding platform or both platforms. </center>
+
+# Boxplot of all platform
+```{r, echo=FALSE, warning=FALSE,fig.align='center'}  
+subjectT <- c("BAL_T_mRNA","BAL_T_miR","BEC_T_miR","EXO_T_miR","Serum_M_Non_targeted")
+subjectT2 <- c("BALF_M_Oxylip","Serum_M_Oxylip","Serum_M_Biocrates","Serum_M_Kynurenine","Serum_M_Sphingolipid","BAL_P_DIGE","BAL_P_iTRAQ_ONE_impute","BAL_P_iTRAQ_ALL_impute","BEC_P_TMT_impute")
+
+        for (i in 1:length(subjectT)) {                
+                subject <- subjectT[i]
+
+                eval(parse(text = paste("data = cosmic$",subject,sep="")))
+                c <- match(colnames(data),cosmic$datasummary$barcode)
+                data <- data[,is.na(c)==FALSE]
+                    boxplot(data,xaxt="n",xlab="Samples",ylab="log2(values)",main=subject)    
+        }
+for (i in 1:length(subjectT2)) {                
+                subject <- subjectT2[i]
+
+                eval(parse(text = paste("data = cosmic$",subject,sep="")))
+                c <- match(colnames(data),cosmic$datasummary$barcode)
+                data <- data[,is.na(c)==FALSE]
+                   boxplot(data,xaxt="n",xlab="Samples",ylab="Raw values/Ratio",main=subject)   
+        }
+
+```
+
+## Data Summary
+### Before importing to R
+1. Copy sheet ***Data block Incl Excl_QC excl*** to sheet ***data***
+2. Delet contents and finally as in sheet ***data***
+### After importing to R
+3. Using *datasummary_format.R* to formated barcode and 4 groups in ***cgroup*** column as NH, SH, SC and EC. 
+
+## Clinical Data 2016-03-31
+### Before importing to R
+1. Add sheet ***data*** and copy content from ***COSMIC clinical 2016-03-31*** to it;
+2. Replace empty cell as ***NA*** (n=388); replace ***na*** as ***NA***(n=541)
+3. Duplicate the first row ***Subject ID*** to ***COSMIC ID*** at row 2;
+4. Copy the first column to the front, replace ***space*** to ***_***, rename ***Smoking_status*** to ***Smoking*** and ***Diagnosis_(Healthy=1,__COPD=2)*** to ***Diagnosis***.
+
+## clinical data for bioconductor prepared by Vincenzo (cosmic$clinic_bioconductor)
+The code is in preprocessing.R. After input COSMIC clinical_2016-03-31_selected.csv, a column variable named barcode is added.
+
+### After importing to R
+5. Name column name as datasummary$barcode
+6. Use the first column as rowname, then delet the first column
+
+## Clinical Data 
+### Before importing to R
+1. Add sheet ***data*** and copy content from ***clinical_2015...*** to it;
+2. Replace empty cell as ***NA*** (n=248); replace ***na*** as ***NA***(n=684); Delete column after ***DT***
+3. Replace ***patient no*** to ***COSMIC ID*** at A184;
+4. Copy the first column to the front, replace ***space*** to ***_***, rename ***Smoking_*** to ***Smoking*** and ***Doctor_*** to ***Doctor***.
+
+### After importing to R
+5. Rename duplicated row names to "rawname" + 2
+6. Name column name as datasummary$barcode
+7. Use the first column as rowname, then delet the first column
+
+## BAL_T_mRNA
+### Before importing to R
+1. Copy sheet "mRNA_all subj o genes_quant.xls" to "data"
+2. Delete row 2 to 16; Delet column B, G to K; Delet column without expression values (empty cells)
+3. Insert a copy of first row as the second row. The first item was renamed as "COSMIC_ID"; formatted the COSMIC ID.
+4. No missing values from column E to BD
+5. Number of row = 41002, start column = 6
+6. Save sheet "data" to .csv file ***`r par["BAL_T_mRNA","fname"]`***
+
+## BAL_P_DIGE
+### Before importing to R
+1. Copy pure data to new sheet "data", column E, Q to CO
+2. Insert a copy of first row as the second row. The first item was renamed as "COSMIC_ID"
+
+### After importing to R
+3. Convert the value from the original **log10** tranformation to **log2** transformation
+
+## BAL_P_iTRAQ
+### Before importing to R
+1. copy sheet ***iTRAQ_BALc_75p ALL_ratio_log2*** to ***dataALL***
+2. Delete row 2 to 4; delete column B to S; for row 1 from column B to end replace "_log2*" to empty and formated cell as number.
+3. replace all empty cell to "NA". n=1599
+4. copy sheet ***iTRAQ_BALc_75per_ONE_ratio_log2*** to ***dataONE***
+5. Delete row 2 to 4; delete column B to S; for row 1 from column B to end formated cell as number.
+6. replace all empty cell to "NA". n=20652
+
+### After importing to R
+7. BAL_P_iTRAQ_ALL and BAL_P_iTRAQ_ONE correspond to step 1 and 3 respectively.
+8. Test different KNN imputation parameters based on BAL_P_iTRAQ_ONE
+9. The test from KNN imputation is not good, still impute with K = 10. The report is in "./doc/Report_Imputation_BAL_iTRAQ_CXL160525.docx" using iTRAQ_impute.R
+
+## BAL_T_miR
+### Before importing to R
+1. Copy sheet "HsamiR_quantle_BAL_excl QCoutl" to "data"
+2. Insert a copy of first row as the second row. 
+3. Fill the "input_info.xlsx" par["BAL_T_miR","scol"]<-43, starting column of expression data.
+4. Change the cell of H2 (row 2, column aveA) to 1.00
+### After importing to R
+5. Name rownames as column "Probe.Sequence".
+6. Delete column 1 to par["BAL_T_miR","scol"]<-43 -1, except column *aveA* which is moved to the last column.
+7. Formated columnames as formated COSMIC ID, delete the columns without formated COSMIC ID.
+
+## BEC_T_miR
+### Before importing to R
+1. Copy sheet "Hsa_miR_Quantile" to "data".
+2. Delete all column not sample expression except Prob.sequence and aveA
+
+### After importing to R
+5. Name rownames as column "Probe.Sequence".
+6. Delete column 1 to par["BEC_T_miR","scol"]<-43 -1, except column *aveA* which is moved to the last column.
+7. Formated columnames as formated COSMIC ID, delete the columns without formated COSMIC ID.
+
+## EXO_T_miR
+### Before importing to R
+1. Copy sheet "EXO_miR_quantileAll_log2_66 sub" to "data".
+2. Insert a copy of first row as the second row. 
+3. Fill the "input_info.xlsx" par["EXO_T_miR","scol"]<-43, starting column of expression data.
+4. Change the cell of H2 (row 2, column aveA) to 1.00.
+### After importing to R
+5. Name rownames as column "Probe.Sequence".
+6. Delete column 1 to par["EXO_T_miR","scol"]<-43 -1, except column *aveA* which is moved to the last column.
+7. Formated columnames as formated COSMIC ID, delete the columns without formated COSMIC ID.
+
+## BALF_M_Oxylip
+
+### Before importing to R
+1. Replace empty cell to "NA",n=226
+### After importing to R
+2. Using "SecID" as rownames
+3. Delete column/sample with all NA values
+4. Imputation of missing values as 1/3 of LLOQ of special features
+
+## Serum_M_Oxylip
+### Before importing to R
+1. Replace empty cell to "NA",n=222
+### After importing to R
+2. Using "SecID" as rownames
+3. Delete column/sample with all NA values
+4. Imputation of missing values as 1/3 of LLOQ of special features
+
+## Oxylip_annot
+### Before importing to R
+1. Fill A1=SecID, B1=Symbol
+2. Replace empty cell, "-" to "NA"
+### After importing to R
+3. First row as head/columnames
+4. Using "SecID" as rownames
+
+## Serum_M_Non_targeted
+### Before importing to R
+1. Copy sheet "Non-targeted(Q-Ex)" to data with transpose
+2. Correct COS_1101_2206b to COS_1101; COS_2201_2210b to COS_2201
+3. Delete "COS_"" in row 1
+
+### After importing to R
+4. Convert the raw non-log transformed value to **log2** transformation
+
+## Non_target annot
+### Before importing to R
+1. The same as Serum_M_Non_targeted, from Serum_metabolomics_3 platform_Shama_2016-05.xlsx sheet "data"/"Non-targeted(Q-Ex)"
+
+### After importing to R
+2. The first 8 columns are extracted
+3. Merge **conversionTable** by Vincenzo into it, by adding a new column "KEGG"
+
+
+
+## Serum_M_Biocrates, Serum_M_Kynurenine, Serum_M_Sphingolipid
+### Before importing to R
+1. Replace "<LLOQ" and empty cell as "NA"
+
+### After importing to R
+2. Transpose data into row as features and column as samples
+3. Filter features with only NA or 0
+
+### BEC_P_TMT
+### Before importing to R
+1. Copy sheet **TMT_BEC_75%_All_log2_ratio** to **data**
+2. In sheet **data**, delete column B to S, delete row 1, 3 and 4
+3. Replace empty cell as "NA", n = 2234
+
+### After importing to R
+4. Transfer first row to COSMIC barcode as column name; use first column as row name
