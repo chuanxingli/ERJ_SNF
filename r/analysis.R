@@ -2,9 +2,11 @@
 
 fpath = "<Your Path to Folder>"
 fpath = "~/Documents/GitHub/ERJ_SNF/" 
-rpath = "~/Documents/GitHub/ERJ_SNF/results/"
+rpath = paste0(fpath,"results/")
 
-library(SNFtool);library(pbapply);library(parallel)
+# install.packages(c("SNFtool","pbapply","parallel","tidyverse"))
+
+require(SNFtool);require(pbapply);require(parallel); require(tidyverse)
 source(paste0(fpath,'r/generate_random_dataL.R'))
 source(paste0(fpath,'/r/generate_input.R'))
 source(paste0(fpath,'r/internal.R'))
@@ -27,8 +29,9 @@ input <- generate_input(raw$dataL,raw$label,omics=names(raw$dataL),minS=10)
 # 2. SNF similarity matrix
 
 ### global parameters for  SNF
-vk=3:10;va=seq(0.3,0.8,by=0.1);vt=c(20,30);
+vk=3:10;va=seq(0.3,0.8,by=0.1);vt=c(20,30); # comprehensive parameters
 vk=5:10;va=seq(0.3,0.8,by=0.2);vt=c(20,30);
+vk=c(5,10);va=seq(0.3,0.8,by=0.5);vt=c(20,30); # simplest
 
 ### weight matrix for each data block for each K and alpha combinations
 Wi <- weightMatrix(input$dist,vk,va)
